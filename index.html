@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>MAX FF LIKES — Store</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- Spotify-style Geometric Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #07090f;
+      --card: #101422;
+      --card-hover: #161c30;
+      --border: rgba(255, 255, 255, 0.08);
+      --primary: #ff3b5c;
+      --secondary: #7c3aed;
+      --cyan: #38bdf8;
+      --green: #10b981;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    h1, h2, h3, .brand-title, .price-tag, .dm-btn, .tab-btn {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      letter-spacing: -0.02em;
+    }
+
+    body {
+      background: radial-gradient(circle at top right, #1e112b 0%, #0b0e18 45%, var(--bg) 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .app-wrapper {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 18px 16px 48px;
+    }
+
+    /* Header Section */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 14px;
+    }
+
+    .brand-title {
+      font-size: 22px;
+      font-weight: 800;
+      background: linear-gradient(90deg, #ff3b5c, #f97316, #a855f7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      color: var(--cyan);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-top: 3px;
+    }
+
+    .status-pill {
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: var(--green);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .pulse-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
+    }
+
+    .user-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 5px 12px 5px 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 11px;
+      color: #fff;
+    }
+
+    .user-meta { text-align: left; }
+    .user-meta h4 {
+      font-size: 11px;
+      font-weight: 600;
+      max-width: 95px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .user-meta span { font-size: 9px; color: var(--muted); display: block; }
+
+    /* Server Ticker */
+    .server-strip {
+      background: rgba(16, 20, 34, 0.85);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 8px 14px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .server-strip span {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+      margin-right: 10px;
+    }
+
+    .flags {
+      letter-spacing: 2px;
+      font-size: 13px;
+      overflow-x: auto;
+      white-space: nowrap;
+      scrollbar-width: none;
+    }
+    .flags::-webkit-scrollbar { display: none; }
+
+    /* 3-Tab Navigation (Store, My Plans, Orders) */
+    .nav-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .tab-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 11px 8px;
+      color: var(--muted);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(135deg, var(--secondary), #4f46e5);
+      border-color: rgba(167, 139, 250, 0.5);
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(124, 58, 237, 0.35);
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Configuration Selectors */
+    .section-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .section-label b { font-size: 11px; color: var(--primary); font-weight: 600; }
+
+    .config-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .input-group {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      border-radius: 14px;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 5px;
+    }
+
+    select {
+      width: 100%;
+      background: transparent;
+      color: var(--text);
+      border: none;
+      font-size: 12px;
+      font-weight: 600;
+      outline: none;
+    }
+    select option { background: #101422; color: #fff; }
+
+    /* Plans List */
+    .plans-container { display: flex; flex-direction: column; gap: 11px; }
+
+    .plan-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+    }
+    .plan-card:active {
+      transform: scale(0.985);
+      border-color: var(--primary);
+      background: var(--card-hover);
+    }
+    .plan-card.popular {
+      border-color: rgba(255, 59, 92, 0.45);
+      background: linear-gradient(135deg, rgba(255, 59, 92, 0.1), rgba(124, 58, 237, 0.06) 60%, var(--card) 100%);
+    }
+
+    .popular-tag {
+      position: absolute;
+      top: 0;
+      right: 14px;
+      background: linear-gradient(90deg, var(--primary), #f97316);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-bottom-left-radius: 8px;
+      border-bottom-right-radius: 8px;
+      letter-spacing: 0.04em;
+    }
+
+    .plan-left { display: flex; align-items: center; gap: 13px; }
+    .svg-icon-box {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(145deg, rgba(255, 59, 92, 0.15), rgba(124, 58, 237, 0.15));
+      border: 1px solid rgba(255, 59, 92, 0.28);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ff5c77;
+      flex-shrink: 0;
+    }
+
+    .plan-info h3 { font-size: 15px; font-weight: 700; color: #fff; }
+    .plan-info p { font-size: 12px; color: var(--muted); margin-top: 3px; font-weight: 500; }
+    .plan-info p span { color: var(--cyan); font-weight: 600; }
+
+    .plan-right { text-align: right; }
+    .days-pill {
+      background: rgba(124, 58, 237, 0.18);
+      color: #c4b5fd;
+      border: 1px solid rgba(124, 58, 237, 0.35);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+      display: inline-block;
+      margin-bottom: 4px;
+    }
+    .price-tag { display: block; font-size: 18px; font-weight: 800; color: #fff; }
+    .price-tag.star-mode { color: #fbbf24; }
+
+    /* My Plans & Orders Styling */
+    .empty-state {
+      background: var(--card);
+      border: 1px dashed var(--border);
+      border-radius: 16px;
+      padding: 36px 20px;
+      text-align: center;
+    }
+    .empty-state svg { color: var(--muted); margin-bottom: 10px; }
+    .empty-state h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .empty-state p { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+    .action-pill-btn {
+      background: var(--secondary);
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      padding: 9px 18px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .order-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px 16px;
+      margin-bottom: 11px;
+    }
+    .order-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .order-id { font-size: 11px; color: var(--muted); font-weight: 600; }
+
+    /* Status Badges: Pending, Successful, Failed */
+    .badge {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 9px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .badge.pending {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--amber);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+    }
+    .badge.successful {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--green);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+    }
+    .badge.failed {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--red);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+    }
+
+    .order-mid {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .order-mid h4 { font-size: 15px; font-weight: 700; }
+    .order-mid span { font-size: 16px; font-weight: 800; color: var(--cyan); }
+
+    .order-meta {
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .order-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .mini-btn {
+      flex: 1;
+      padding: 7px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      cursor: pointer;
+    }
+    .mini-btn.ok { border-color: rgba(16, 185, 129, 0.4); color: var(--green); }
+    .mini-btn.fail { border-color: rgba(239, 68, 68, 0.4); color: var(--red); }
+
+    /* Active Plan Progress Card */
+    .active-plan-card {
+      background: linear-gradient(145deg, rgba(124, 58, 237, 0.18), rgba(255, 59, 92, 0.1), var(--card));
+      border: 1px solid rgba(124, 58, 237, 0.45);
+      border-radius: 18px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .progress-bar-bg {
+      width: 100%;
+      height: 7px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      margin: 10px 0 6px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--cyan), var(--primary));
+      border-radius: 999px;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      margin-top: 26px;
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .footer a { color: var(--cyan); text-decoration: none; font-weight: 600; }
+
+    /* Checkout Modal Bottom Sheet */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 999;
+    }
+    .modal-backdrop.show { display: flex; }
+
+    .bottom-sheet {
+      width: 100%;
+      max-width: 480px;
+      background: #0e1320;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      border-top-left-radius: 24px;
+      border-top-right-radius: 24px;
+      padding: 22px 18px 30px;
+      animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+    .sheet-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .sheet-header h2 { font-size: 19px; font-weight: 800; }
+    .sheet-sub { font-size: 12px; color: var(--cyan); font-weight: 600; margin-top: 2px; }
+    .close-modal {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .receipt-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 6px 14px;
+      margin-bottom: 16px;
+    }
+    .receipt-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 13px;
+    }
+    .receipt-row:last-child { border-bottom: none; }
+    .receipt-row span { color: var(--muted); font-size: 12px; font-weight: 500; }
+    .receipt-row strong { color: #fff; font-weight: 600; }
+    .receipt-row.total strong { font-size: 20px; font-weight: 800; color: var(--primary); }
+
+    .dm-btn {
+      width: 100%;
+      background: linear-gradient(90deg, #ff3b5c, #ec4899);
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      padding: 15px;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(255, 59, 92, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .dm-btn:active { transform: scale(0.98); }
+  </style>
+</head>
+<body>
+
+  <div class="app-wrapper">
+    <!-- Top Bar -->
+    <div class="header">
+      <div>
+        <div class="brand-title">MAX FF LIKES</div>
+        <div class="brand-sub">220 Likes Daily • Auto System</div>
+      </div>
+      <div style="text-align: right;">
+        <div class="status-pill"><span class="pulse-dot"></span> Server Online</div>
+        <div class="user-card">
+          <div class="avatar" id="userAvatar">FF</div>
+          <div class="user-meta">
+            <h4 id="userName">FF Player</h4>
+            <span id="userId">TG ID: --</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Supported Regions Bar -->
+    <div class="server-strip">
+      <span>ALL SERVERS</span>
+      <div class="flags">🇮🇳 🇧🇷 🇺🇸 🇸🇬 🇷🇺 🇮🇩 🇹🇼 🇻🇳 🇹🇭 🇵🇰 🇧🇩 🌍</div>
+    </div>
+
+    <!-- 3-Tab Navigation Bar -->
+    <div class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab('store', this)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        STORE
+      </button>
+      <button class="tab-btn" onclick="switchTab('plans', this)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        MY PLANS
+      </button>
+      <button class="tab-btn" onclick="switchTab('orders', this)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        ORDERS
+      </button>
+    </div>
+
+    <!-- TAB 1: STORE -->
+    <div id="tab-store" class="tab-panel active">
+      <div class="section-label">
+        <span>Server & Payment</span>
+        <b>@maxfflikes_bot</b>
+      </div>
+      
+      <div class="config-grid">
+        <div class="input-group">
+          <label>Game Server</label>
+          <select id="serverSelect">
+            <option value="IND (India 🇮🇳)">🇮🇳 IND — India</option>
+            <option value="BR (Brazil 🇧🇷)">🇧🇷 BR — Brazil</option>
+            <option value="US (United States 🇺🇸)">🇺🇸 US — United States</option>
+            <option value="SG (Singapore 🇸🇬)">🇸🇬 SG — Singapore</option>
+            <option value="RU (Russia 🇷🇺)">🇷🇺 RU — Russia</option>
+            <option value="ID (Indonesia 🇮🇩)">🇮🇩 ID — Indonesia</option>
+            <option value="TW (Taiwan 🇹🇼)">🇹🇼 TW — Taiwan</option>
+            <option value="VN (Vietnam 🇻🇳)">🇻🇳 VN — Vietnam</option>
+            <option value="TH (Thailand 🇹🇭)">🇹🇭 TH — Thailand</option>
+            <option value="PK (Pakistan 🇵🇰)">🇵🇰 PK — Pakistan</option>
+            <option value="BD (Bangladesh 🇧🇩)">🇧🇩 BD — Bangladesh</option>
+            <option value="EUROPE (Europe 🌍)">🌍 EUROPE</option>
+            <option value="ME (Middle East 🌍)">🌍 ME — Middle East</option>
+            <option value="SAC (South America 🌍)">🌍 SAC — South America</option>
+            <option value="NA (North America 🌍)">🌍 NA — North America</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label>Payment Method</label>
+          <select id="paymentSelect" onchange="renderPackages()">
+            <option value="UPI">UPI (IND 🇮🇳)</option>
+            <option value="STARS">Telegram Stars ⭐️</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section-label">
+        <span>Select Package</span>
+        <b>220 Likes / Day</b>
+      </div>
+      <div class="plans-container" id="plansContainer"></div>
+    </div>
+
+    <!-- TAB 2: MY PLANS -->
+    <div id="tab-plans" class="tab-panel">
+      <div class="section-label">
+        <span>Active Subscriptions</span>
+        <b>220 Likes / Day</b>
+      </div>
+      <div id="myPlansContainer"></div>
+    </div>
+
+    <!-- TAB 3: ORDER HISTORY -->
+    <div id="tab-orders" class="tab-panel">
+      <div class="section-label">
+        <span>Order History</span>
+        <b id="orderCountBadge">0 Orders</b>
+      </div>
+      <div id="ordersContainer"></div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      MAX FF LIKES — Boost Your Profile<br>
+      Need help? Contact Admin <a href="https://t.me/vijxzz" target="_blank">@vijxzz</a>
+    </div>
+  </div>
+
+  <!-- Checkout Bottom Sheet -->
+  <div class="modal-backdrop" id="checkoutModal" onclick="handleBackdropClick(event)">
+    <div class="bottom-sheet">
+      <div class="sheet-header">
+        <div>
+          <h2>Confirm Order</h2>
+          <div class="sheet-sub" id="modalSubtitle"></div>
+        </div>
+        <button class="close-modal" onclick="closeCheckout()">✕</button>
+      </div>
+
+      <div class="receipt-box">
+        <div class="receipt-row"><span>Package</span><strong id="recPlan"></strong></div>
+        <div class="receipt-row"><span>Daily Speed</span><strong>220 Likes / Day</strong></div>
+        <div class="receipt-row"><span>Server</span><strong id="recServer"></strong></div>
+        <div class="receipt-row"><span>Payment</span><strong id="recPayment"></strong></div>
+        <div class="receipt-row total"><span>Total Payable</span><strong id="recPrice"></strong></div>
+      </div>
+
+      <p style="text-align: center; font-size: 11px; color: var(--muted); margin-bottom: 14px;">
+        Tap below to open DM with <b>@vijxzz</b>. Your order will be logged under Orders.
+      </p>
+
+      <button class="dm-btn" onclick="proceedToDM()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        Buy Now via @vijxzz
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const ADMIN_USERNAME = "vijxzz";
+    const BOT_USERNAME = "@maxfflikes_bot";
+
+    const SVG_ICONS = {
+      bolt: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
+      trend: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`,
+      rocket: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>`,
+      crown: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg>`,
+      diamond: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 13L2 9Z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/></svg>`,
+      trophy: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>`
+    };
+
+    const PACKAGES = [
+      { title: "1 Day Trial", days: 1, likes: "220", amount: 25, icon: SVG_ICONS.bolt, badge: "" },
+      { title: "Weekly Starter", days: 7, likes: "1,540", amount: 55, icon: SVG_ICONS.trend, badge: "" },
+      { title: "15 Days Booster", days: 15, likes: "3,300", amount: 100, icon: SVG_ICONS.rocket, badge: "POPULAR" },
+      { title: "Monthly Pro", days: 30, likes: "6,600", amount: 180, icon: SVG_ICONS.crown, badge: "BEST VALUE" },
+      { title: "60 Days Elite", days: 60, likes: "13,200", amount: 320, icon: SVG_ICONS.diamond, badge: "" },
+      { title: "120 Days Legend", days: 120, likes: "26,400", amount: 600, icon: SVG_ICONS.trophy, badge: "MAX" }
+    ];
+
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
+
+    let buyer = { name: "FF Player", username: "Not Set", id: "Unknown" };
+
+    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+      const u = tg.initDataUnsafe.user;
+      buyer.name = [u.first_name, u.last_name].filter(Boolean).join(" ");
+      buyer.username = u.username ? `@${u.username}` : "No Username";
+      buyer.id = u.id;
+    }
+
+    document.getElementById("userName").innerText = buyer.name;
+    document.getElementById("userId").innerText = `TG ID: ${buyer.id}`;
+    document.getElementById("userAvatar").innerText = buyer.name.slice(0, 2).toUpperCase();
+
+    function formatPrice(amount) {
+      const mode = document.getElementById("paymentSelect").value;
+      return mode === "STARS" ? `${amount} ⭐️` : `₹${amount}`;
+    }
+
+    function getPaymentLabel() {
+      const mode = document.getElementById("paymentSelect").value;
+      return mode === "STARS" ? "Telegram Stars ⭐️" : "UPI (IND 🇮🇳)";
+    }
+
+    // Render Store Packages dynamically based on UPI vs Stars
+    function renderPackages() {
+      const isStars = document.getElementById("paymentSelect").value === "STARS";
+      const container = document.getElementById("plansContainer");
+      container.innerHTML = "";
+
+      PACKAGES.forEach((pkg, idx) => {
+        const isPopular = pkg.badge !== "";
+        const priceDisplay = formatPrice(pkg.amount);
+
+        container.innerHTML += `
+          <div class="plan-card ${isPopular ? 'popular' : ''}" onclick="openCheckout(${idx})">
+            ${pkg.badge ? `<div class="popular-tag">${pkg.badge}</div>` : ''}
+            <div class="plan-left">
+              <div class="svg-icon-box">${pkg.icon}</div>
+              <div class="plan-info">
+                <h3>${pkg.title}</h3>
+                <p>220/Day • <span>${pkg.likes} Likes</span></p>
+              </div>
+            </div>
+            <div class="plan-right">
+              <span class="days-pill">${pkg.days} ${pkg.days === 1 ? 'DAY' : 'DAYS'}</span>
+              <span class="price-tag ${isStars ? 'star-mode' : ''}">${priceDisplay}</span>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    // Initial render
+    renderPackages();
+
+    // Tab Switcher
+    function switchTab(tabName, btnEl) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btnEl.classList.add('active');
+      document.getElementById(`tab-${tabName}`).classList.add('active');
+      if (tabName === 'orders') renderOrders();
+      if (tabName === 'plans') renderMyPlans();
+    }
+
+    // Local Storage Order & Plan Management
+    function getOrders() {
+      return JSON.parse(localStorage.getItem('maxff_orders') || '[]');
+    }
+
+    function saveOrders(orders) {
+      localStorage.setItem('maxff_orders', JSON.stringify(orders));
+    }
+
+    function updateOrderStatus(orderId, newStatus) {
+      const orders = getOrders();
+      const idx = orders.findIndex(o => o.id === orderId);
+      if (idx !== -1) {
+        orders[idx].status = newStatus;
+        if (newStatus === 'successful') {
+          orders[idx].activatedAt = new Date().toLocaleDateString();
+        }
+        saveOrders(orders);
+        renderOrders();
+        renderMyPlans();
+      }
+    }
+
+    function renderOrders() {
+      const orders = getOrders();
+      const listEl = document.getElementById('ordersContainer');
+      document.getElementById('orderCountBadge').innerText = `${orders.length} ${orders.length === 1 ? 'Order' : 'Orders'}`;
+
+      if (orders.length === 0) {
+        listEl.innerHTML = `
+          <div class="empty-state">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <h3>No Orders Yet</h3>
+            <p>Your pending, successful, and failed orders will appear here.</p>
+            <button class="action-pill-btn" onclick="document.querySelectorAll('.tab-btn')[0].click()">Browse Store</button>
+          </div>`;
+        return;
+      }
+
+      listEl.innerHTML = orders.map(o => `
+        <div class="order-card">
+          <div class="order-top">
+            <span class="order-id">#${o.id} • ${o.date}</span>
+            <span class="badge ${o.status}">${o.status}</span>
+          </div>
+          <div class="order-mid">
+            <h4>${o.title} (${o.likes} Likes)</h4>
+            <span>${o.price}</span>
+          </div>
+          <div class="order-meta">
+            <span>Server: ${o.server}</span>
+            <span>${o.payment}</span>
+          </div>
+          ${o.status === 'pending' ? `
+            <div class="order-actions">
+              <button class="mini-btn ok" onclick="updateOrderStatus('${o.id}', 'successful')">✓ Mark Paid</button>
+              <button class="mini-btn fail" onclick="updateOrderStatus('${o.id}', 'failed')">✕ Cancel / Failed</button>
+            </div>
+          ` : ''}
+        </div>
+      `).join('');
+    }
+
+    function renderMyPlans() {
+      const activePlans = getOrders().filter(o => o.status === 'successful');
+      const plansEl = document.getElementById('myPlansContainer');
+
+      if (activePlans.length === 0) {
+        plansEl.innerHTML = `
+          <div class="empty-state">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <h3>No Active Plan</h3>
+            <p>Purchase a package from the Store and complete payment with @vijxzz to activate daily likes.</p>
+            <button class="action-pill-btn" onclick="document.querySelectorAll('.tab-btn')[0].click()">Get Auto Likes</button>
+          </div>`;
+        return;
+      }
+
+      plansEl.innerHTML = activePlans.map(p => `
+        <div class="active-plan-card">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span class="badge successful">ACTIVE • 220/DAY</span>
+            <span style="font-size:11px; color:var(--muted);">Order #${p.id}</span>
+          </div>
+          <h3 style="font-size:17px; font-weight:800; margin-top:10px;">${p.title} — ${p.likes} Likes</h3>
+          <p style="font-size:12px; color:var(--cyan); margin-top:2px;">Server: ${p.server}</p>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" style="width: 15%;"></div>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--muted);">
+            <span>Duration: ${p.days} ${p.days === 1 ? 'Day' : 'Days'}</span>
+            <span>Started: ${p.activatedAt || p.date}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    let activePackage = null;
+
+    function openCheckout(idx) {
+      activePackage = PACKAGES[idx];
+      const server = document.getElementById("serverSelect").value;
+      const paymentLabel = getPaymentLabel();
+      const formattedPrice = formatPrice(activePackage.amount);
+
+      document.getElementById("modalSubtitle").innerText = `${activePackage.days} Days • ${activePackage.likes} Total Likes`;
+      document.getElementById("recPlan").innerText = `${activePackage.title} (${activePackage.likes} Likes)`;
+      document.getElementById("recServer").innerText = server;
+      document.getElementById("recPayment").innerText = paymentLabel;
+      document.getElementById("recPrice").innerText = formattedPrice;
+
+      document.getElementById("checkoutModal").classList.add("show");
+    }
+
+    function closeCheckout() {
+      document.getElementById("checkoutModal").classList.remove("show");
+    }
+
+    function handleBackdropClick(e) {
+      if (e.target.id === "checkoutModal") closeCheckout();
+    }
+
+    function proceedToDM() {
+      if (!activePackage) return;
+      const server = document.getElementById("serverSelect").value;
+      const paymentLabel = getPaymentLabel();
+      const formattedPrice = formatPrice(activePackage.amount);
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const orderId = "FF" + Math.floor(100000 + Math.random() * 900000);
+
+      // Save order as Pending in user's Order History
+      const orders = getOrders();
+      orders.unshift({
+        id: orderId,
+        title: activePackage.title,
+        days: activePackage.days,
+        likes: activePackage.likes,
+        price: formattedPrice,
+        server: server,
+        payment: paymentLabel,
+        status: "pending",
+        date: now.toLocaleDateString([], { month: 'short', day: 'numeric' }) + " " + timeStr
+      });
+      saveOrders(orders);
+      closeCheckout();
+
+      const orderText = `❤️‍🔥 HELLO @${ADMIN_USERNAME} 👋
+
+I WANT TO BUY MAX FF AUTOLIKES:
+
+🧾 ORDER ID: #${orderId}
+👤 NAME: ${buyer.name} (${buyer.username})
+🆔 TG ID: ${buyer.id}
+📦 PLAN: ${activePackage.days} Days — ${activePackage.likes} Likes (220/Day)
+💰 PRICE: ${formattedPrice}
+🌍 SERVER: ${server}
+💳 PAYMENT: ${paymentLabel}
+🤖 BOT: ${BOT_USERNAME}
+⏰ TIME: ${timeStr}`;
+
+      const dmUrl = `https://t.me/${ADMIN_USERNAME}?text=${encodeURIComponent(orderText)}`;
+      tg.openTelegramLink(dmUrl);
+    }
+  </script>
+</body>
+</html>
