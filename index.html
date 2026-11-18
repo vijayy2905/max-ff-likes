@@ -798,7 +798,32 @@
       localStorage.setItem('maxff_orders', JSON.stringify(orders));
     }
 
-    // Admin-only status toggle
+    // Auto-Approve Order when Buyer taps Admin Bot's Activation Button (?startapp=ORDER_ID)
+    function checkActivationLink() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const startParam = (tg.initDataUnsafe && tg.initDataUnsafe.start_param) || urlParams.get('approve');
+
+      if (startParam) {
+        const cleanId = startParam.replace('#', '').trim().toUpperCase();
+        const orders = getOrders();
+        const idx = orders.findIndex(o => o.id.toUpperCase() === cleanId);
+
+        if (idx !== -1 && orders[idx].status === 'pending') {
+          orders[idx].status = 'successful';
+          orders[idx].startDate = getNextDayString(1); // Always starts tomorrow
+          orders[idx].endDate = getNextDayString(1 + orders[idx].days);
+          saveOrders(orders);
+
+          // Automatically open "My Plans" tab so buyer sees their scheduled plan
+          setTimeout(() => {
+            document.querySelectorAll('.tab-btn')[1].click();
+          }, 250);
+        }
+      }
+    }
+    checkActivationLink();
+
+    // Admin-only manual status toggle
     function updateOrderStatus(orderId, newStatus) {
       if (!isAdmin) return;
       const orders = getOrders();
@@ -806,7 +831,7 @@
       if (idx !== -1) {
         orders[idx].status = newStatus;
         if (newStatus === 'successful') {
-          orders[idx].startDate = getNextDayString(1); // Always starts tomorrow
+          orders[idx].startDate = getNextDayString(1);
           orders[idx].endDate = getNextDayString(1 + orders[idx].days);
         }
         saveOrders(orders);
@@ -926,7 +951,7 @@
       const orderId = "FF" + Math.floor(100000 + Math.random() * 900000);
       const nextDay = getNextDayString(1);
 
-      // Save order as Pending (no Mark Paid button shown to buyers)
+      // Save order as Pending
       const orders = getOrders();
       orders.unshift({
         id: orderId,
@@ -943,6 +968,9 @@
       saveOrders(orders);
       closeCheckout();
 
+      // Auto-generated Pro Admin Command (Tap-to-copy in Telegram)
+      const adminCmd = `/approve ${buyer.id} ${activePackage.days} ${orderId}`;
+
       const orderText = `❤️‍🔥 ${toBold("HELLO")} @${ADMIN_USERNAME} 👋
 
 ${toBold("I WANT TO BUY MAX FF AUTOLIKES:")}
@@ -956,7 +984,10 @@ ${toBold("I WANT TO BUY MAX FF AUTOLIKES:")}
 🌍 ${toBold("SERVER:")} ${toBold(server)}
 💳 ${toBold("PAYMENT:")} ${toBold(paymentLabel)}
 🤖 ${toBold("BOT:")} ${BOT_USERNAME}
-⏰ ${toBold("TIME:")} ${toBold(timeStr)}`;
+⏰ ${toBold("TIME:")} ${toBold(timeStr)}
+
+⚡ ${toBold("ADMIN COMMAND:")}
+\`${adminCmd}\``;
 
       const dmUrl = `https://t.me/${ADMIN_USERNAME}?text=${encodeURIComponent(orderText)}`;
       tg.openTelegramLink(dmUrl);
