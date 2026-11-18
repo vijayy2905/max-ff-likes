@@ -167,7 +167,7 @@
     }
     .flags::-webkit-scrollbar { display: none; }
 
-    /* 3-Tab Navigation (Store, My Plans, Orders) */
+    /* 3-Tab Navigation */
     .nav-tabs {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -359,7 +359,7 @@
     }
     .order-id { font-size: 11px; color: var(--muted); font-weight: 600; }
 
-    /* Status Badges: Pending, Successful, Failed */
+    /* Status Badges */
     .badge {
       font-size: 10px;
       font-weight: 800;
@@ -402,6 +402,7 @@
       border-top: 1px solid rgba(255, 255, 255, 0.05);
     }
 
+    /* Admin-Only Approval Controls */
     .order-actions {
       display: flex;
       gap: 8px;
@@ -434,7 +435,7 @@
       height: 7px;
       background: rgba(255, 255, 255, 0.08);
       border-radius: 999px;
-      margin: 10px 0 6px;
+      margin: 10px 0 8px;
       overflow: hidden;
     }
     .progress-bar-fill {
@@ -628,7 +629,7 @@
     <div id="tab-plans" class="tab-panel">
       <div class="section-label">
         <span>Active Subscriptions</span>
-        <b>220 Likes / Day</b>
+        <b>Starts Next Day</b>
       </div>
       <div id="myPlansContainer"></div>
     </div>
@@ -663,13 +664,14 @@
       <div class="receipt-box">
         <div class="receipt-row"><span>Package</span><strong id="recPlan"></strong></div>
         <div class="receipt-row"><span>Daily Speed</span><strong>220 Likes / Day</strong></div>
+        <div class="receipt-row"><span>Schedule</span><strong>Starts Tomorrow</strong></div>
         <div class="receipt-row"><span>Server</span><strong id="recServer"></strong></div>
         <div class="receipt-row"><span>Payment</span><strong id="recPayment"></strong></div>
         <div class="receipt-row total"><span>Total Payable</span><strong id="recPrice"></strong></div>
       </div>
 
       <p style="text-align: center; font-size: 11px; color: var(--muted); margin-bottom: 14px;">
-        Tap below to open DM with <b>@vijxzz</b>. Your order will be logged under Orders.
+        Tap below to open DM with <b>@vijxzz</b>. Your order will stay <b>Pending</b> until verified by Admin.
       </p>
 
       <button class="dm-btn" onclick="proceedToDM()">
@@ -705,18 +707,39 @@
     tg.ready();
     tg.expand();
 
-    let buyer = { name: "FF Player", username: "Not Set", id: "Unknown" };
+    let buyer = { name: "FF Player", username: "Not Set", rawUsername: "", id: "Unknown" };
 
     if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
       const u = tg.initDataUnsafe.user;
       buyer.name = [u.first_name, u.last_name].filter(Boolean).join(" ");
+      buyer.rawUsername = (u.username || "").toLowerCase();
       buyer.username = u.username ? `@${u.username}` : "No Username";
       buyer.id = u.id;
     }
 
+    // Only @vijxzz sees Admin Approval Buttons
+    const isAdmin = buyer.rawUsername === ADMIN_USERNAME.toLowerCase();
+
     document.getElementById("userName").innerText = buyer.name;
     document.getElementById("userId").innerText = `TG ID: ${buyer.id}`;
     document.getElementById("userAvatar").innerText = buyer.name.slice(0, 2).toUpperCase();
+
+    // Helper: Always calculates Next Day (Tomorrow) for plan start
+    function getNextDayString(daysToAdd = 1) {
+      const d = new Date();
+      d.setDate(d.getDate() + daysToAdd);
+      return d.toLocaleDateString('en-GB'); // DD/MM/YYYY format
+    }
+
+    // Helper: Convert English letters & numbers to Unicode Sans-Serif Bold for Telegram DM
+    function toBold(str) {
+      const normal = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+      const bold   = "𝗔𝗕𝗖𝗗𝗘𝗙𝗚𝗛𝗜𝗝𝗞𝗟𝗠𝗡𝗢𝗣𝗤𝗥𝗦𝗧𝗨𝗩𝗪𝗫𝗬𝗭𝗮𝗯𝗰𝗱𝗲𝗳𝗴𝗵𝗶𝗷𝗸𝗹𝗺𝗻𝗼𝗽𝗾𝗿𝘀𝘁𝘂𝘃𝘄𝘅𝘆𝘇𝟬𝟭𝟮𝟯𝟰𝟱𝟲𝟳𝟴𝟵";
+      return String(str).split('').map(ch => {
+        const idx = normal.indexOf(ch);
+        return idx !== -1 ? [...bold][idx] : ch;
+      }).join('');
+    }
 
     function formatPrice(amount) {
       const mode = document.getElementById("paymentSelect").value;
@@ -728,7 +751,6 @@
       return mode === "STARS" ? "Telegram Stars ⭐️" : "UPI (IND 🇮🇳)";
     }
 
-    // Render Store Packages dynamically based on UPI vs Stars
     function renderPackages() {
       const isStars = document.getElementById("paymentSelect").value === "STARS";
       const container = document.getElementById("plansContainer");
@@ -757,10 +779,8 @@
       });
     }
 
-    // Initial render
     renderPackages();
 
-    // Tab Switcher
     function switchTab(tabName, btnEl) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -770,7 +790,6 @@
       if (tabName === 'plans') renderMyPlans();
     }
 
-    // Local Storage Order & Plan Management
     function getOrders() {
       return JSON.parse(localStorage.getItem('maxff_orders') || '[]');
     }
@@ -779,13 +798,16 @@
       localStorage.setItem('maxff_orders', JSON.stringify(orders));
     }
 
+    // Admin-only status toggle
     function updateOrderStatus(orderId, newStatus) {
+      if (!isAdmin) return;
       const orders = getOrders();
       const idx = orders.findIndex(o => o.id === orderId);
       if (idx !== -1) {
         orders[idx].status = newStatus;
         if (newStatus === 'successful') {
-          orders[idx].activatedAt = new Date().toLocaleDateString();
+          orders[idx].startDate = getNextDayString(1); // Always starts tomorrow
+          orders[idx].endDate = getNextDayString(1 + orders[idx].days);
         }
         saveOrders(orders);
         renderOrders();
@@ -823,10 +845,10 @@
             <span>Server: ${o.server}</span>
             <span>${o.payment}</span>
           </div>
-          ${o.status === 'pending' ? `
+          ${(isAdmin && o.status === 'pending') ? `
             <div class="order-actions">
-              <button class="mini-btn ok" onclick="updateOrderStatus('${o.id}', 'successful')">✓ Mark Paid</button>
-              <button class="mini-btn fail" onclick="updateOrderStatus('${o.id}', 'failed')">✕ Cancel / Failed</button>
+              <button class="mini-btn ok" onclick="updateOrderStatus('${o.id}', 'successful')">✓ Approve (Admin)</button>
+              <button class="mini-btn fail" onclick="updateOrderStatus('${o.id}', 'failed')">✕ Reject (Admin)</button>
             </div>
           ` : ''}
         </div>
@@ -842,29 +864,31 @@
           <div class="empty-state">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             <h3>No Active Plan</h3>
-            <p>Purchase a package from the Store and complete payment with @vijxzz to activate daily likes.</p>
+            <p>Once @vijxzz confirms your payment, your plan will appear here starting the next day.</p>
             <button class="action-pill-btn" onclick="document.querySelectorAll('.tab-btn')[0].click()">Get Auto Likes</button>
           </div>`;
         return;
       }
 
-      plansEl.innerHTML = activePlans.map(p => `
+      plansEl.innerHTML = activePlans.map(p => {
+        const startsOn = p.startDate || getNextDayString(1);
+        return `
         <div class="active-plan-card">
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <span class="badge successful">ACTIVE • 220/DAY</span>
+            <span class="badge successful">SCHEDULED • 220/DAY</span>
             <span style="font-size:11px; color:var(--muted);">Order #${p.id}</span>
           </div>
           <h3 style="font-size:17px; font-weight:800; margin-top:10px;">${p.title} — ${p.likes} Likes</h3>
           <p style="font-size:12px; color:var(--cyan); margin-top:2px;">Server: ${p.server}</p>
           <div class="progress-bar-bg">
-            <div class="progress-bar-fill" style="width: 15%;"></div>
+            <div class="progress-bar-fill" style="width: 10%;"></div>
           </div>
           <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--muted);">
             <span>Duration: ${p.days} ${p.days === 1 ? 'Day' : 'Days'}</span>
-            <span>Started: ${p.activatedAt || p.date}</span>
+            <span style="color:#fff; font-weight:600;">Starts: ${startsOn}</span>
           </div>
         </div>
-      `).join('');
+      `}).join('');
     }
 
     let activePackage = null;
@@ -900,8 +924,9 @@
       const now = new Date();
       const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const orderId = "FF" + Math.floor(100000 + Math.random() * 900000);
+      const nextDay = getNextDayString(1);
 
-      // Save order as Pending in user's Order History
+      // Save order as Pending (no Mark Paid button shown to buyers)
       const orders = getOrders();
       orders.unshift({
         id: orderId,
@@ -912,24 +937,26 @@
         server: server,
         payment: paymentLabel,
         status: "pending",
+        startDate: nextDay,
         date: now.toLocaleDateString([], { month: 'short', day: 'numeric' }) + " " + timeStr
       });
       saveOrders(orders);
       closeCheckout();
 
-      const orderText = `❤️‍🔥 HELLO @${ADMIN_USERNAME} 👋
+      const orderText = `❤️‍🔥 ${toBold("HELLO")} @${ADMIN_USERNAME} 👋
 
-I WANT TO BUY MAX FF AUTOLIKES:
+${toBold("I WANT TO BUY MAX FF AUTOLIKES:")}
 
-🧾 ORDER ID: #${orderId}
-👤 NAME: ${buyer.name} (${buyer.username})
-🆔 TG ID: ${buyer.id}
-📦 PLAN: ${activePackage.days} Days — ${activePackage.likes} Likes (220/Day)
-💰 PRICE: ${formattedPrice}
-🌍 SERVER: ${server}
-💳 PAYMENT: ${paymentLabel}
-🤖 BOT: ${BOT_USERNAME}
-⏰ TIME: ${timeStr}`;
+🧾 ${toBold("ORDER ID:")} #${toBold(orderId)}
+👤 ${toBold("NAME:")} ${toBold(buyer.name)} (${buyer.username})
+🆔 ${toBold("TG ID:")} ${toBold(buyer.id)}
+📦 ${toBold("PLAN:")} ${toBold(activePackage.days + " Days")} — ${toBold(activePackage.likes + " Likes")} (220/Day)
+📅 ${toBold("STARTS:")} ${toBold(nextDay)} (Next Day)
+💰 ${toBold("PRICE:")} ${toBold(formattedPrice)}
+🌍 ${toBold("SERVER:")} ${toBold(server)}
+💳 ${toBold("PAYMENT:")} ${toBold(paymentLabel)}
+🤖 ${toBold("BOT:")} ${BOT_USERNAME}
+⏰ ${toBold("TIME:")} ${toBold(timeStr)}`;
 
       const dmUrl = `https://t.me/${ADMIN_USERNAME}?text=${encodeURIComponent(orderText)}`;
       tg.openTelegramLink(dmUrl);
