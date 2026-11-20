@@ -383,6 +383,11 @@
       color: var(--red);
       border: 1px solid rgba(239, 68, 68, 0.35);
     }
+    .badge.completed {
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--cyan);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+    }
 
     .order-mid {
       display: flex;
@@ -442,6 +447,7 @@
       height: 100%;
       background: linear-gradient(90deg, var(--cyan), var(--primary));
       border-radius: 999px;
+      transition: width 0.25s ease;
     }
 
     /* Footer */
@@ -717,21 +723,75 @@
       buyer.id = u.id;
     }
 
-    // Only @vijxzz sees Admin Approval Buttons
     const isAdmin = buyer.rawUsername === ADMIN_USERNAME.toLowerCase();
 
     document.getElementById("userName").innerText = buyer.name;
     document.getElementById("userId").innerText = `TG ID: ${buyer.id}`;
     document.getElementById("userAvatar").innerText = buyer.name.slice(0, 2).toUpperCase();
 
-    // Helper: Always calculates Next Day (Tomorrow) for plan start
     function getNextDayString(daysToAdd = 1) {
       const d = new Date();
       d.setDate(d.getDate() + daysToAdd);
-      return d.toLocaleDateString('en-GB'); // DD/MM/YYYY format
+      return d.toLocaleDateString('en-GB');
     }
 
-    // Helper: Convert English letters & numbers to Unicode Sans-Serif Bold for Telegram DM
+    function parseDMY(dateStr) {
+      if (!dateStr) return null;
+      const parts = dateStr.split('/');
+      if (parts.length !== 3) return null;
+      const [dd, mm, yyyy] = parts.map(Number);
+      return new Date(yyyy, mm - 1, dd, 0, 0, 0, 0);
+    }
+
+    function getPlanProgress(plan) {
+      const startObj = parseDMY(plan.startDate);
+      const now = new Date();
+      const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      const totalLikes = plan.days * 220;
+
+      if (!startObj || todayMidnight < startObj) {
+        return {
+          statusLabel: "SCHEDULED • 220/DAY",
+          badgeClass: "pending",
+          percent: 5,
+          completedDays: 0,
+          deliveredLikes: 0,
+          totalLikes,
+          rightText: `Starts: ${plan.startDate || getNextDayString(1)}`
+        };
+      }
+
+      const msPerDay = 24 * 60 * 60 * 1000;
+      const daysSinceStart = Math.floor((todayMidnight - startObj) / msPerDay) + 1;
+      const completedDays = Math.min(plan.days, Math.max(0, daysSinceStart));
+      const isCompleted = daysSinceStart > plan.days || (plan.days === 1 && todayMidnight >= startObj && now.getHours() >= 12);
+      const effectiveDays = isCompleted ? plan.days : completedDays;
+      const deliveredLikes = effectiveDays * 220;
+      const percent = Math.min(100, Math.round((effectiveDays / plan.days) * 100));
+
+      if (isCompleted || percent >= 100) {
+        return {
+          statusLabel: "COMPLETED • 100%",
+          badgeClass: "completed",
+          percent: 100,
+          completedDays: plan.days,
+          deliveredLikes: totalLikes,
+          totalLikes,
+          rightText: `Completed (${totalLikes.toLocaleString()} Likes)`
+        };
+      }
+
+      return {
+        statusLabel: `ACTIVE • DAY ${effectiveDays}/${plan.days}`,
+        badgeClass: "successful",
+        percent,
+        completedDays: effectiveDays,
+        deliveredLikes,
+        totalLikes,
+        rightText: `${deliveredLikes.toLocaleString()} / ${totalLikes.toLocaleString()} Likes`
+      };
+    }
+
     function toBold(str) {
       const normal = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
       const bold   = "𝗔𝗕𝗖𝗗𝗘𝗙𝗚𝗛𝗜𝗝𝗞𝗟𝗠𝗡𝗢𝗣𝗤𝗥𝗦𝗧𝗨𝗩𝗪𝗫𝗬𝗭𝗮𝗯𝗰𝗱𝗲𝗳𝗴𝗵𝗶𝗷𝗸𝗹𝗺𝗻𝗼𝗽𝗾𝗿𝘀𝘁𝘂𝘃𝘄𝘅𝘆𝘇𝟬𝟭𝟮𝟯𝟰𝟱𝟲𝟳𝟴𝟵";
@@ -798,7 +858,6 @@
       localStorage.setItem('maxff_orders', JSON.stringify(orders));
     }
 
-    // Auto-Approve Order when Buyer taps Admin Bot's Activation Button (?startapp=ORDER_ID)
     function checkActivationLink() {
       const urlParams = new URLSearchParams(window.location.search);
       const startParam = (tg.initDataUnsafe && tg.initDataUnsafe.start_param) || urlParams.get('approve');
@@ -810,11 +869,11 @@
 
         if (idx !== -1 && orders[idx].status === 'pending') {
           orders[idx].status = 'successful';
-          orders[idx].startDate = getNextDayString(1); // Always starts tomorrow
+          orders[idx].approvedAt = Date.now();
+          orders[idx].startDate = getNextDayString(1);
           orders[idx].endDate = getNextDayString(1 + orders[idx].days);
           saveOrders(orders);
 
-          // Automatically open "My Plans" tab so buyer sees their scheduled plan
           setTimeout(() => {
             document.querySelectorAll('.tab-btn')[1].click();
           }, 250);
@@ -823,7 +882,6 @@
     }
     checkActivationLink();
 
-    // Admin-only manual status toggle
     function updateOrderStatus(orderId, newStatus) {
       if (!isAdmin) return;
       const orders = getOrders();
@@ -831,6 +889,7 @@
       if (idx !== -1) {
         orders[idx].status = newStatus;
         if (newStatus === 'successful') {
+          orders[idx].approvedAt = Date.now();
           orders[idx].startDate = getNextDayString(1);
           orders[idx].endDate = getNextDayString(1 + orders[idx].days);
         }
@@ -896,21 +955,25 @@
       }
 
       plansEl.innerHTML = activePlans.map(p => {
-        const startsOn = p.startDate || getNextDayString(1);
+        const prog = getPlanProgress(p);
+        const barGradient = prog.percent >= 100
+          ? "linear-gradient(90deg, var(--green), var(--cyan))"
+          : "linear-gradient(90deg, var(--cyan), var(--primary))";
+
         return `
         <div class="active-plan-card">
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <span class="badge successful">SCHEDULED • 220/DAY</span>
+            <span class="badge ${prog.badgeClass}">${prog.statusLabel}</span>
             <span style="font-size:11px; color:var(--muted);">Order #${p.id}</span>
           </div>
           <h3 style="font-size:17px; font-weight:800; margin-top:10px;">${p.title} — ${p.likes} Likes</h3>
           <p style="font-size:12px; color:var(--cyan); margin-top:2px;">Server: ${p.server}</p>
           <div class="progress-bar-bg">
-            <div class="progress-bar-fill" style="width: 10%;"></div>
+            <div class="progress-bar-fill" style="width: ${prog.percent}%; background: ${barGradient};"></div>
           </div>
           <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--muted);">
-            <span>Duration: ${p.days} ${p.days === 1 ? 'Day' : 'Days'}</span>
-            <span style="color:#fff; font-weight:600;">Starts: ${startsOn}</span>
+            <span>Duration: ${p.days} ${p.days === 1 ? 'Day' : 'Days'} (${prog.percent}%)</span>
+            <span style="color:#fff; font-weight:600;">${prog.rightText}</span>
           </div>
         </div>
       `}).join('');
@@ -951,7 +1014,6 @@
       const orderId = "FF" + Math.floor(100000 + Math.random() * 900000);
       const nextDay = getNextDayString(1);
 
-      // Save order as Pending
       const orders = getOrders();
       orders.unshift({
         id: orderId,
@@ -968,7 +1030,6 @@
       saveOrders(orders);
       closeCheckout();
 
-      // Auto-generated Pro Admin Command (Tap-to-copy in Telegram)
       const adminCmd = `/approve ${buyer.id} ${activePackage.days} ${orderId}`;
 
       const orderText = `❤️‍🔥 ${toBold("HELLO")} @${ADMIN_USERNAME} 👋
